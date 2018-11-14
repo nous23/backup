@@ -1,0 +1,15 @@
+default_dst: D:\BACKUP
+
+# s/m/h/d/w
+default_period: 5m
+
+tasks:
+  - src: C:\Users\c00345622\Documents\My Kindle Content
+    dst:
+    period: 1m
+    name: kindle备份任务
+  - src: D:\Work\维护记录
+    period: 10s
+  - src: C:\temp
+  - src: C:\\Users\\c00345622\\Pictures
+    period: 5m
