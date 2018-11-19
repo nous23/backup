@@ -115,3 +115,12 @@ func DealRobocopyResult(o string, e error) (output string, err error) {
 	}
 	return o, e
 }
+
+func IsProcessRunning(processName string) (bool, error) {
+	output, err := RunCommand("tasklist")
+	if err != nil {
+		return false, err
+	} else {
+		return strings.Contains(output, processName), nil
+	}
+}
