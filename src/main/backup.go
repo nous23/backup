@@ -16,10 +16,12 @@ import (
 )
 
 var BackupStatusCh chan string
+var FilterFiles []string
 
 type BackupConfig struct {
 	DefaultDst    string `yaml:"default_dst"`
 	DefaultPeriod string `yaml:"default_period"`
+	DefaultFilteredFiles []string `yaml:"default_filtered_file"`
 	Tasks         []Task `yaml:"tasks"`
 }
 
@@ -54,6 +56,10 @@ func (bc *BackupConfig) Validate() (err error) {
 			}
 		}
 
+		if len(bc.DefaultFilteredFiles) > 0 {
+			bc.Tasks[index].FilteredFiles = append(bc.Tasks[index].FilteredFiles, bc.DefaultFilteredFiles...)
+		}
+
 		if strings.EqualFold(task.Name, "") {
 			bc.Tasks[index].Name = "[" + bc.Tasks[index].Src + "-->" + bc.Tasks[index].Dst + "]"
 		}
@@ -71,6 +77,7 @@ type Task struct {
 	stopCh         chan string
 	LastSuccTime   time.Time `yaml:"last_succ_time"`
 	RecentResult   []string  `yaml:"recent_result"`
+	FilteredFiles  []string  `yaml:"filtered_files"`
 }
 
 func (t *Task) check() (err error) {
@@ -141,18 +148,22 @@ func (t *Task) work() (err error) {
 	if fi.Mode().IsRegular() {
 		srcFileDir := filepath.Dir(t.Src)
 		srcFile := filepath.Base(t.Src)
-		output, err = util.DealRobocopyResult(util.RunCommandWithRetry(values.RobocopyRetryCount, "robocopy", srcFileDir, t.Dst, srcFile))
+		args := []string{srcFileDir, t.Dst, srcFile, "/xf"}
+		args = append(args, t.FilteredFiles...)
+		output, err = util.DealRobocopyResult(util.RunCommandWithRetry(values.RobocopyRetryCount, "robocopy",
+			args...))
 		if err != nil {
-			glog.Errorf("exec command {%s} failed: %v\n%v", strings.Join([]string{"robocopy", srcFileDir, t.Dst,
-				srcFile}, " "), err, output)
+			glog.Errorf("exec command {robocopy %s} failed: %v\n%v", strings.Join(args, " "), err, output)
 			return err
 		}
 	} else if fi.Mode().IsDir() {
 		dstPath := filepath.Join(t.Dst, filepath.Base(t.Src))
-		output, err = util.DealRobocopyResult(util.RunCommandWithRetry(values.RobocopyRetryCount, "robocopy", t.Src, dstPath, "/e"))
+		args := []string{t.Src, dstPath, "/e", "/xf"}
+		args = append(args, t.FilteredFiles...)
+		output, err = util.DealRobocopyResult(util.RunCommandWithRetry(values.RobocopyRetryCount, "robocopy",
+			args...))
 		if err != nil {
-			glog.Errorf("exec command {%s} failed: %v\n%v", strings.Join([]string{"robocopy", t.Src, dstPath,
-				"/e"}, " "), err, output)
+			glog.Errorf("exec command {robocopy %s} failed: %v\n%v", strings.Join(args, " "), err, output)
 			return err
 		}
 	} else {

@@ -2,6 +2,8 @@ default_dst: D:\BACKUP
 
 # s/m/h/d/w
 default_period: 5m
+default_filtered_file:
+  - desktop.ini
 
 tasks:
   - src: C:\Users\c00345622\Documents\My Kindle Content
