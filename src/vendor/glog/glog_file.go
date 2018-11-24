@@ -40,6 +40,9 @@ var logDirs []string
 // See createLogDirs for the full list of possible destinations.
 var logDir = flag.String("log_dir", "", "If non-empty, write log files in this directory")
 
+var logFileName = flag.String("log_name", "", "If not empty, use this as log file name")
+var isAppend = flag.Bool("append", false, "If true, will append logs to an existing file")
+
 func createLogDirs() {
 	if *logDir != "" {
 		logDirs = append(logDirs, *logDir)
@@ -81,18 +84,22 @@ func shortHostname(hostname string) string {
 // logName returns a new log file name containing tag, with start time t, and
 // the name for the symlink for tag.
 func logName(tag string, t time.Time) (name, link string) {
-	name = fmt.Sprintf("%s.%s.%s.log.%s.%04d%02d%02d-%02d%02d%02d.%d",
-		program,
-		host,
-		userName,
-		tag,
-		t.Year(),
-		t.Month(),
-		t.Day(),
-		t.Hour(),
-		t.Minute(),
-		t.Second(),
-		pid)
+	if strings.EqualFold(*logFileName, "") {
+		name = fmt.Sprintf("%s.%s.%s.log.%s.%04d%02d%02d-%02d%02d%02d.%d",
+			program,
+			host,
+			userName,
+			tag,
+			t.Year(),
+			t.Month(),
+			t.Day(),
+			t.Hour(),
+			t.Minute(),
+			t.Second(),
+			pid)
+	} else {
+		name = *logFileName + "." + tag + ".log"
+	}
 	return name, program + "." + tag
 }
 
@@ -111,7 +118,11 @@ func create(tag string, t time.Time) (f *os.File, filename string, err error) {
 	var lastErr error
 	for _, dir := range logDirs {
 		fname := filepath.Join(dir, name)
-		f, err := os.Create(fname)
+		if *isAppend {
+			f, err = os.OpenFile(fname, os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
+		} else {
+			f, err = os.Create(fname)
+		}
 		if err == nil {
 			symlink := filepath.Join(dir, link)
 			os.Remove(symlink)        // ignore err
@@ -122,3 +133,4 @@ func create(tag string, t time.Time) (f *os.File, filename string, err error) {
 	}
 	return nil, "", fmt.Errorf("log: cannot create log: %v", lastErr)
 }
+

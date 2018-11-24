@@ -74,6 +74,11 @@ func main() {
 			fmt.Printf("delete path %s failed: %v", programDir, err)
 			return
 		}
+	} else {
+		if err = os.Mkdir(programDir, os.ModePerm); err != nil {
+			fmt.Printf("can't create program directory: %v", err)
+			return
+		}
 	}
 	_, err = util.RunCommandWithRetry(values.RobocopyRetryCount, "robocopy", currDir, programDir, "/e")
 	if err != nil {
