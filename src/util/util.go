@@ -1,6 +1,7 @@
 package util
 
 import (
+	"bytes"
 	"errors"
 	"mahonia"
 	"os"
@@ -26,10 +27,23 @@ func Exists(path string) bool {
 }
 
 
-func ParseDuration(s string) (t time.Duration, err error) {
-	unit := s[len(s)-1:]
+func ParseDuration(duration string) (t time.Duration, err error) {
+	numberBytes := []byte("1234567890")
+	durationBytes := []byte(duration)
+	var number []byte
+	var i int
+	var b byte
+	for i, b = range durationBytes {
+		if bytes.ContainsRune(numberBytes, rune(b)) {
+			number = append(number, byte(b))
+		} else {
+			break
+		}
+	}
+	unit := durationBytes[i:]
+	unitString := string(unit)
 	var timeUnit int64
-	switch unit {
+	switch unitString {
 	case "s":
 		timeUnit = int64(time.Second)
 	case "m":
@@ -38,13 +52,17 @@ func ParseDuration(s string) (t time.Duration, err error) {
 		timeUnit = int64(time.Hour)
 	case "d":
 		timeUnit = int64(time.Hour * 24)
+	case "w":
+		timeUnit = int64(time.Hour * 24 * 7)
+	case "mo":
+		timeUnit = int64(time.Hour * 24 * 30)
 	default:
 		err = errors.New("invalid time unit")
 		return t, err
 	}
 
-	countStr := s[0 : len(s)-1]
-	count, err := strconv.Atoi(countStr)
+	numberString := string(number)
+	count, err := strconv.Atoi(numberString)
 	if err != nil {
 		return t, err
 	}
